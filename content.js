@@ -18,10 +18,10 @@
                 type:'POST',
                 contentType:'application/json'
             });
-        };
+        }
     };
 
-    _RBP.RboxManager = function() {
+    _RBP.RboxManager = {
         _meta: {
             BASE_URI: '',
             BASE_API_URI: ''
@@ -56,16 +56,24 @@
                         );
                     });
             });
-        };       
+        }       
     };
 
     _RBP.LinkedIn = {
         injectStyling: function() {
-
+            $( 'head' ).append(
+                _.templateFromId(
+                    'jst-plugin-styling', {}
+                )
+            );
         },
 
         initScaffold: function() {
-
+            $( '#wrapper' ).before(
+                _.templateFromId(
+                    'jst-plugin-body', {}
+                )
+            );
         },
 
         extractProfile: function() {
