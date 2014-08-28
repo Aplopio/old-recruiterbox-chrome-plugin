@@ -82,7 +82,28 @@
         },
 
         extractProfile: function() {
-
+            var isDesiredContainer = function( container_id ) {
+                var desired_background_fields = [
+                    "background-experience-container",
+                    "background-projects-container",
+                    "background-education-container"
+                ];
+                return desired_background_fields.indexOf( container_id ) !== -1;
+            };
+            var content = {};
+            content.profile_name = $( 'h1' ).find( '.full-name' ).text();
+            var profile_html = '';
+            $( '.background-content' ).children().each(
+                function( index, container ) {
+                    var $container = $( container );
+                    if( isDesiredContainer( $container.attr( 'id' ) ) ) {
+                        $container.find( 'script' ).remove();
+                        profile_html = profile_html + $container.html();
+                    }
+                }
+            );
+            content.background_html = profile_html;
+            return content;
         },
 
         events: function() {
