@@ -15,7 +15,7 @@ module.exports = function(grunt) {
                     namespace: '_RBP.JST'
                 },
                 files: {
-                    "templates.js": ["jst/*.html"]
+                    "template.js": ["jst/*.html"]
                 }
             }
         }
