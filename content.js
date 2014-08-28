@@ -74,6 +74,11 @@
                     'jst-plugin-body', {}
                 )
             );
+            $( '.rbox-plugin-body' ).html(
+                _.templateFromId(
+                    'jst-plugin-export-block', {}
+                )
+            );
         },
 
         extractProfile: function() {
