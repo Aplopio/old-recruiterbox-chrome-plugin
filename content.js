@@ -46,7 +46,7 @@
                     self._meta.BASE_API_URI + 'candidates/', params );
 
                 var candidate_data = {
-                    first_name: responseData.profile_name
+                    first_name: data.profile_name
                 };
                 
                 _RBP.utils.postJSON( url_for_candidate_create, candidate_data )
@@ -111,6 +111,10 @@
             $(document).ready(function() {
                 self.injectStyling();
                 self.initScaffold();
+            }).on('click', '.rbox-plugin-export-btn', function(e) {
+                var profile = self.extractProfile();
+
+                e && e.preventDefault();
             });
         }
     };
