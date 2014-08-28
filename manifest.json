@@ -1,0 +1,22 @@
+{
+  "manifest_version": 2,
+
+  "name": "Recruiterbox sample",
+  "description": "This extension creates Recruiterbox candidate from someone's LinkedIn profile",
+  "version": "1.0",
+  "background": {"scripts": ["jquery.min.js", "underscore-min.js"]},
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/*"],
+      "js": ["jquery.min.js", "underscore-min.js", "template.js", "content.js"]
+    }
+  ],
+  "permissions": [
+    "cookies", "tabs", "<all_urls>"
+  ],
+  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
+  "browser_action": {
+    "default_icon": "icon.png",
+    "default_popup": "popup.html"
+  }
+}

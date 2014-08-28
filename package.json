@@ -1,0 +1,12 @@
+{
+  "name": "recruiterbox-chrome-plugin",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node app"
+  },
+  "dependencies": {
+    "grunt": "~0.4.2",
+    "grunt-contrib-jst": "~0.6.0"
+  }
+}
