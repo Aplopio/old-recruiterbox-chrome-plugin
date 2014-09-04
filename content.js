@@ -7,56 +7,59 @@
     };
 
     _RBP.utils = {
-        getURL: function( base_url, params ) {
-            return base_url + '?' + $.param(params);
-        },
-
-        postJSON: function( url, data ) {
-            return $.ajax({
-                url: url,
-                data:JSON.stringify(data),
-                type:'POST',
-                contentType:'application/json'
+        sendMessageToExtension: function( request, callback ) {
+            chrome.runtime.sendMessage(request, function( resp ) {
+                console.log(resp);
+                callback( resp );
             });
         }
     };
 
     _RBP.RboxManager = {
         _meta: {
-            BASE_URI: '',
-            BASE_API_URI: ''
+            BASE_URI: 'http://demoaccount.rbox.com:8000',
+            BASE_API_URI: 'http://demoaccount.rbox.com:8000/api/v1'
         },
 
         getCredentials: function( callback ) {
             var self = this;
-            $.get(self._meta.BASE_URI + 'accounts/get_credentials_for_plugin_user',
-                function(data) {
-                    callback(data);
-                }
-            ).error(function(data) {
-                debugger;
+            _RBP.utils.sendMessageToExtension(
+                { action: "rbox-get-credentials" }, function(resp) {
+                    callback(resp);
+                });
+        },
+
+        isLoggedIn: function( callback ) {
+            var self = this;
+            self.getCredentials( function( data ) {
+                callback( Boolean( data && data.api_key ), data );
             });
+            //callback(true, {username: 'Sushant'});
+            //callback(null, undefined);
         },
 
         exportAsCandidate: function( data, callback ) {
             var self = this;
-            self.getCredentials( function( credentials ) {
-                var params = $.extend( {}, credentials, { format: 'json' } );
-                var url_for_candidate_create = _RBP.utils.getURL(
-                    self._meta.BASE_API_URI + 'candidates/', params );
+            callback( { status: 'success' } );
+            // var requestObj = {
+            //     action: "rbox-export-as-candidates",
+            //     data: data
+            // };
+            // _RBP.utils.sendMessageToExtension(
+            //     requestObj, function(response) {
+            //     console.log(response);
+            // });
+        },
 
-                var candidate_data = {
-                    first_name: data.profile_name
-                };
-                
-                _RBP.utils.postJSON( url_for_candidate_create, candidate_data )
-                    .done( function( resp ) {
-                        $( '.notification-candidate-create' ).html(
-                            'Candidate exported successfully'
-                        );
-                    });
+        events: function() {
+            var self = this;
+            $(document).on('click', '.rbox-plugin-login-btn', function(e) {
+                console.log('Login clicked');
+                window.open(self._meta.BASE_URI + '/accounts/chrome_plugin_login',
+                    'chrome_plugin_login', "width=380, height=480");
+                e.preventDefault();
             });
-        }       
+        }     
     };
 
     _RBP.LinkedIn = {
@@ -74,11 +77,22 @@
                     'jst-plugin-body', {}
                 )
             );
-            $( '.rbox-plugin-body' ).html(
-                _.templateFromId(
-                    'jst-plugin-export-block', {}
-                )
-            );
+            _RBP.RboxManager.isLoggedIn( function( is_logged_in, credentials ) {
+                var block_to_inject = 'jst-plugin-login-block';
+                var block_context = {};
+                if( is_logged_in ) {
+                    block_to_inject = 'jst-plugin-export-block';
+                    block_context = {
+                        username: credentials.username
+                    };
+                }
+                $( '.rbox-plugin-body' ).html(
+                    _.templateFromId(
+                        block_to_inject, {}
+                    )
+                );
+            });
+            
         },
 
         extractProfile: function() {
@@ -111,9 +125,15 @@
             $(document).ready(function() {
                 self.injectStyling();
                 self.initScaffold();
-            }).on('click', '.rbox-plugin-export-btn', function(e) {
+            }).on('click', '.rbox-plugin-export-btn, .rbox-plugin-reexport-btn', function(e) {
                 var profile = self.extractProfile();
-
+                console.log(profile);
+                var successful_export_html = _.templateFromId(
+                    'jst-plugin-successful-export', {} );
+                $('.rbox-plugin-export-span').html(successful_export_html);
+                // _RBP.RboxManager.exportAsCandidate(profile, function(resp) {
+                    
+                // });
                 e && e.preventDefault();
             });
         }
@@ -130,6 +150,7 @@
     _RBP.events = function() {
         $(document).ready(function() {
             _RBP.router();
+            _RBP.RboxManager.events();
         });
     };
 
