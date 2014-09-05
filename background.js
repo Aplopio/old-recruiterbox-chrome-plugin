@@ -6,13 +6,24 @@
             return base_url + '?' + $.param(params);
         },
 
-        postJSON: function( url, data ) {
+        postJSON: function( url, data, callback ) {
             return $.ajax({
                 url: url,
                 data:JSON.stringify(data),
                 type:'POST',
-                contentType:'application/json'
+                contentType:'application/json',
+                success: callback,
+                dataType: 'json'
             });
+        },
+
+        slugify: function( text ) {
+            return text.toString().toLowerCase()
+                .replace(/\s+/g, '-')           // Replace spaces with -
+                .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+                .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+                .replace(/^-+/, '')             // Trim - from start of text
+                .replace(/-+$/, '');            // Trim - from end of text
         }
     };
 
@@ -22,11 +33,19 @@
             BASE_API_URI: 'http://demoaccount.rbox.com:8000/api/v1'
         },
 
+        getURLWithCredentials: function( url, credentials ) {
+            var params = $.extend(
+                {}, {
+                    username: credentials.username,
+                    api_key: credentials.api_key
+                }, { format: 'json' }
+            );
+            var url_with_credentials = _RBB.utils.getURL(
+                url, params );
+            return url_with_credentials;
+        },
+
         getCredentials: function( callback ) {
-            // callback({
-            //     username: "demoaccount@recruiterbox.com",
-            //     api_key: "272adf62de6f047f4db9225724bea46b1826a9ae"
-            // })
             var self = this;
             $.get(self._meta.BASE_URI + '/accounts/get_credentials_for_plugin_user',
                 function( data ) {
@@ -37,45 +56,73 @@
             });
         },
 
-        exportAsCandidate: function( data, callback ) {
-            // var self = this;
-            // self.getCredentials( function( credentials ) {
-            //     var params = $.extend( {}, credentials, { format: 'json' } );
-            //     var url_for_candidate_create = _RBB.utils.getURL(
-            //         self._meta.BASE_API_URI + 'candidates/', params );
+        createRboxDocResource: function( html, options, callback ) {
+            options = options || {};
+            var self = this;
+            var filename = options.filename || 'profile.html';
+            var url_with_credentials = self.getURLWithCredentials(
+                self._meta.BASE_API_URI + '/docs/', options.credentials
+            );
+            _RBB.utils.postJSON( url_with_credentials, {
+                filename: filename,
+                filecontent: html
+            }, callback);
+        },
 
-            //     var candidate_data = {
-            //         first_name: data.profile_name
-            //     };
-                
-            //     _RBB.utils.postJSON( url_for_candidate_create, candidate_data )
-            //         .done( function( resp ) {
-            //             $( '.notification-candidate-create' ).html(
-            //                 'Candidate exported successfully'
-            //             );
-            //         });
-            // });
+        createRboxCandidateResource: function( data, options, callback ) {
+            options = options || {};
+            var self = this;
+            var url_with_credentials = self.getURLWithCredentials(
+                self._meta.BASE_API_URI + '/candidates/', options.credentials
+            );
+            _RBB.utils.postJSON( url_with_credentials, data, callback );
+        },
+
+        exportAsCandidate: function( data, callback ) {
+            var self = this;
+            var html = data.background_html;
+            var profile_name = data.profile_name || 'no name';
+            if( html ) {
+                self.getCredentials( function( credentials ) {
+                    self.createRboxDocResource(
+                        html, {
+                            filename: _RBB.utils.slugify( profile_name ) + '.html',
+                            credentials: credentials
+                        },
+                        function( doc ) {
+                            var candidate_data = {
+                                first_name: profile_name,
+                                resume: doc.resource_uri
+                            };
+                            self.createRboxCandidateResource( candidate_data, {
+                                credentials: credentials
+                            }, callback);
+                        }
+                    );
+                });   
+            }
         }       
     };
     
 })( jQuery );
 
-chrome.runtime.onMessage.addListener(
-    function(request, sender, sendResponse) {
-        if( request.action === 'rbox-get-credentials' ) {
-            // sendResponse({
-            //     username: "demoaccount@recruiterbox.com",
-            //     api_key: "272adf62de6f047f4db9225724bea46b1826a9ae"
-            // });
-            _RBB.RboxManager.getCredentials(function( data ) {
-                alert(data.api_key);
-                sendResponse( data );
-            });
-        } else if( request.action === 'rbox-export-as-candidates' ) {
-            _RBB.RboxManager.exportAsCandidate(
-                request.data, function( data ) {
-                    sendResponse( data );
+chrome.runtime.onConnect.addListener( function( port ) {
+    if( port.name == "RB_PORT" ) {
+        port.onMessage.addListener( function( context ) {
+            if( context.request === 'rbox_get_credentials' ) {
+                _RBB.RboxManager.getCredentials( function( data ) {
+                    context.data = data;
+                    port.postMessage( context );
                 });
-        }
+            } else if( context.request === 'rbox_export_as_candidate' ) {
+                _RBB.RboxManager.exportAsCandidate(
+                    context.profile_to_export,
+                    function( data ){
+                        context.data = data;
+                        port.postMessage( context );
+                    }
+                );
+            }
+        });
     }
-);
+});
