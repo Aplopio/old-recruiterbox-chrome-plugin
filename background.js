@@ -6,14 +6,23 @@
             return base_url + '?' + $.param(params);
         },
 
-        postJSON: function( url, data, callback ) {
+        postJSON: function( url, data, callback, errCallback ) {
+            if( errCallback === undefined ) {
+                errCallback = function() {
+                    console.error('Something broke');
+                    return;
+                };
+            }
             return $.ajax({
                 url: url,
                 data:JSON.stringify(data),
                 type:'POST',
                 contentType:'application/json',
+                dataType: 'json',
                 success: callback,
-                dataType: 'json'
+                error: function(XMLHttpRequest, textStatus, errorThrow) {
+                    errCallback();
+                }
             });
         },
 
@@ -29,8 +38,10 @@
 
     _RBB.RboxManager = {
         _meta: {
-            BASE_URI: 'http://demoaccount.rbox.com:8000',
-            BASE_API_URI: 'http://demoaccount.rbox.com:8000/api/v1'
+            BASE_URI: 'https://app.recruiterbox.com',
+            BASE_API_URI: 'https://app.recruiterbox.com/api/v1',
+            // BASE_URI: 'http://demoaccount.rbox.com:8000',
+            // BASE_API_URI: 'http://demoaccount.rbox.com:8000/api/v1'
         },
 
         getURLWithCredentials: function( url, credentials ) {
@@ -66,7 +77,7 @@
             _RBB.utils.postJSON( url_with_credentials, {
                 filename: filename,
                 filecontent: html
-            }, callback);
+            }, callback, options.errCallback );
         },
 
         createRboxCandidateResource: function( data, options, callback ) {
@@ -75,10 +86,12 @@
             var url_with_credentials = self.getURLWithCredentials(
                 self._meta.BASE_API_URI + '/candidates/', options.credentials
             );
-            _RBB.utils.postJSON( url_with_credentials, data, callback );
+            _RBB.utils.postJSON( url_with_credentials,
+                data, callback, options.errCallback );
         },
 
-        exportAsCandidate: function( data, callback ) {
+        exportAsCandidate: function( data, options, callback ) {
+            options = options || {};
             var self = this;
             var html = data.background_html;
             var profile_name = data.profile_name || 'no name';
@@ -87,15 +100,19 @@
                     self.createRboxDocResource(
                         html, {
                             filename: _RBB.utils.slugify( profile_name ) + '.html',
-                            credentials: credentials
+                            credentials: credentials,
+                            errCallback: options.errCallback
                         },
                         function( doc ) {
                             var candidate_data = {
                                 first_name: profile_name,
-                                resume: doc.resource_uri
+                                last_name: '',
+                                resume: doc.resource_uri,
+                                candidate_source: data.source_data.source
                             };
                             self.createRboxCandidateResource( candidate_data, {
-                                credentials: credentials
+                                credentials: credentials,
+                                errCallback: options.errCallback
                             }, callback);
                         }
                     );
@@ -116,7 +133,12 @@ chrome.runtime.onConnect.addListener( function( port ) {
                 });
             } else if( context.request === 'rbox_export_as_candidate' ) {
                 _RBB.RboxManager.exportAsCandidate(
-                    context.profile_to_export,
+                    context.profile_to_export, {
+                        errCallback: function() {
+                            context.error = 'Something went wrong';
+                            port.postMessage( context );
+                        } 
+                    },
                     function( data ){
                         context.data = data;
                         port.postMessage( context );

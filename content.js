@@ -10,8 +10,10 @@
 
     _RBP.RboxManager = {
         _meta: {
-            BASE_URI: 'http://demoaccount.rbox.com:8000',
-            BASE_API_URI: 'http://demoaccount.rbox.com:8000/api/v1'
+            BASE_URI: 'https://app.recruiterbox.com',
+            BASE_API_URI: 'https://app.recruiterbox.com/api/v1'
+            // BASE_URI: 'http://demoaccount.rbox.com:8000',
+            // BASE_API_URI: 'http://demoaccount.rbox.com:8000/api/v1'
         },
 
         getCredentialsCallback: function() {
@@ -37,9 +39,23 @@
             /* You need to assign callback to this field */
         },
 
-        exportAsCandidate: function( data, callback ) {
+        exportAsCandidateErrCallback: function() {
+            /* You need to assign callback to this field */
+        },
+
+        getSourceObj: function() {
+            return {
+                channel: 'Chrome extension'
+            };
+        },
+
+        exportAsCandidate: function( data, options, callback ) {
+            options = options || {};
             var self = this;
             self.exportAsCandidateCallback = callback;
+            if( options.errCallback ) {
+                self.exportAsCandidateErrCallback = options.errCallback;
+            }
             _RBP.port.postMessage({
                 request: "rbox_export_as_candidate",
                 profile_to_export: data
@@ -54,7 +70,22 @@
                     'chrome_plugin_login', "width=380, height=480");
                 e.preventDefault();
             });
-        }     
+
+            var listener = function(event){
+                if( event.origin !== self._meta.BASE_URI ) {
+                    return;
+                }
+                if( event.data === 'rbox-login-success' ) {
+                    window.location.reload(true);
+                }
+            }
+             
+            if (window.addEventListener){
+                addEventListener("message", listener, false);
+            } else {
+                attachEvent("onmessage", listener);
+            }
+        }
     };
 
     _RBP.LinkedIn = {
@@ -78,7 +109,8 @@
                 if( is_logged_in ) {
                     block_to_inject = 'jst-plugin-export-block';
                     block_context = {
-                        name: credentials.name
+                        name: credentials.name,
+                        client_name: credentials.client_name
                     };
                 }
                 $( '.rbox-plugin-body' ).html(
@@ -128,7 +160,13 @@
         renderWaitingExport: function() {
             var waiting_export_html = _.templateFromId(
                 'jst-plugin-waiting-export', {});
-            $('.rbox-plugin-export-span').html( waiting_export_html );
+            $( '.rbox-plugin-export-span' ).html( waiting_export_html );
+        },
+
+        renderErroneousExport: function() {
+            var error_html = _.templateFromId(
+                'jst-plugin-erroneous-export', {});
+            $( '.rbox-plugin-export-span' ).html( error_html );
         },
 
         events: function() {
@@ -141,8 +179,15 @@
                 function(e) {
                     self.renderWaitingExport();
                     var profile = self.extractProfile();
-                    console.log(profile);
-                    _RBP.RboxManager.exportAsCandidate(profile, function( data ) {
+                    var source_data = _RBP.RboxManager.getSourceObj();
+                    source_data.source = 'LinkedIn';
+                    var export_data = $.extend({}, profile,
+                        { source_data: source_data });
+                    _RBP.RboxManager.exportAsCandidate(export_data, {
+                        errCallback: function() {
+                            self.renderErroneousExport();
+                        }
+                    } , function( data ) {
                         self.renderSuccessfulExport( data );
                     });
                     e && e.preventDefault();
@@ -154,7 +199,11 @@
     
     _RBP.router = function() {
         var href = document.location.href
-        if (href.match(/^https:\/\/www.linkedin.com\/.*/g)) {
+        var linkedin_url_1 = href.match(
+            /^https:\/\/[a-z]*.linkedin.com\/profile\/view.*/g);
+        var linkedin_url_2 = href.match(
+            /^https:\/\/[a-z]*.linkedin.com\/in\/.*/g);
+        if ( linkedin_url_1 || linkedin_url_2 ) {
             _RBP.LinkedIn.events();
         }
     };
@@ -165,7 +214,13 @@
             if( context.request === 'rbox_get_credentials' ) {
                 _RBP.RboxManager.getCredentialsCallback( context.data );
             } else if( context.request === 'rbox_export_as_candidate' ) {
-                _RBP.RboxManager.exportAsCandidateCallback( context.data );
+                if( context.error ) {
+                    _RBP.RboxManager.exportAsCandidateErrCallback(
+                        context.error );
+                } else {
+                    _RBP.RboxManager.exportAsCandidateCallback(
+                        context.data );
+                }
             }
         });
 
