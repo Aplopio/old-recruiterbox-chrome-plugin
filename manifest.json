@@ -11,6 +11,9 @@
       "js": ["jquery.min.js", "underscore-min.js", "template.js", "content.js"]
     }
   ],
+  "web_accessible_resources": [
+    "css/style.css"
+  ],
   "permissions": [
     "cookies", "tabs", "<all_urls>"
   ],

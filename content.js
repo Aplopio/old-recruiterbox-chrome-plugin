@@ -93,11 +93,9 @@
         exported_profiles_rbox_urls_key : 'rbox-exported-profiles-rbox-urls',
 
         injectStyling: function() {
-            $( 'head' ).append(
-                _.templateFromId(
-                    'jst-plugin-styling', {}
-                )
-            );
+            var anchor = chrome.extension.getURL('css/style.css');
+            $('<link rel="stylesheet" type="text/css" href="' + 
+                anchor + '" >').appendTo("head");
         },
 
         initScaffold: function() {
@@ -209,6 +207,9 @@
             );
             var $profile_html = $( profile_html );
             $profile_html.find( 'a' ).contents().unwrap();
+            $profile_html = $( '<html></html>' ).html(
+                $( '<body></body>' ).html( $profile_html )
+            );
             content.background_html = $profile_html.html();
 
             content.profile_id = this.getProfileIdentifier();
