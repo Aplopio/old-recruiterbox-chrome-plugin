@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
 
-  "name": "Recruiterbox sample",
-  "description": "This extension creates Recruiterbox candidate from someone's LinkedIn profile",
+  "name": "Add to Recruiterbox",
+  "description": "This extension helps you create a Recruiterbox candidate from a LinkedIn profile",
   "version": "1.0",
   "background": {"scripts": ["lib/jquery.min.js", "background.js"]},
   "content_scripts": [
