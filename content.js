@@ -89,6 +89,9 @@
     };
 
     _RBP.LinkedIn = {
+        exported_profiles_key: 'rbox-exported-profiles',
+        exported_profiles_rbox_urls_key : 'rbox-exported-profiles-rbox-urls',
+
         injectStyling: function() {
             $( 'head' ).append(
                 _.templateFromId(
@@ -98,6 +101,7 @@
         },
 
         initScaffold: function() {
+            var self = this;
             $( '#wrapper' ).before(
                 _.templateFromId(
                     'jst-plugin-body', {}
@@ -110,7 +114,8 @@
                     block_to_inject = 'jst-plugin-export-block';
                     block_context = {
                         name: credentials.name,
-                        client_name: credentials.client_name
+                        client_name: credentials.client_name,
+                        company_name: credentials.company_name
                     };
                 }
                 $( '.rbox-plugin-body' ).html(
@@ -118,8 +123,67 @@
                         block_to_inject, block_context
                     )
                 );
+                if( is_logged_in ) {
+                    var profile_id = self.getProfileIdentifier();
+                    if( self.isProfileAlreadyExported( profile_id ) ) {
+                        self.renderSuccessfulExport();
+                    }
+                }
             });
             
+        },
+
+        initLocalStorage: function () {
+            var exported_profiles = localStorage.getItem(
+                this.exported_profiles_key);
+            var exported_profiles_rbox_urls = localStorage.getItem(
+                this.exported_profiles_rbox_urls_key);
+            if( !exported_profiles ) {
+                localStorage.setItem(this.exported_profiles_key,
+                    JSON.stringify( [] )
+                );
+            }
+            if( !exported_profiles_rbox_urls ) {
+                localStorage.setItem(this.exported_profiles_rbox_urls_key,
+                    JSON.stringify( {} )
+                );
+            }
+        },
+
+        getProfileIdentifier: function() {
+            var pub_urls = $('#top-card span.view-public-profile'),
+                pub_url = pub_urls.length > 0 ? pub_urls[0] : null;
+            if( pub_url ) {
+                return pub_url.textContent;
+            }
+        },
+
+        isProfileAlreadyExported: function( profile_id ) {
+            var exported_profiles = JSON.parse(
+                localStorage.getItem( this.exported_profiles_key )
+            );
+            return exported_profiles.indexOf(profile_id) !== -1;
+        },
+
+        addProfileToLocalStorage: function( profile_id, rbox_url ) {
+            var exported_profiles = JSON.parse(
+                localStorage.getItem( this.exported_profiles_key )
+            );
+            if( exported_profiles.indexOf( profile_id ) === -1 ) {
+                exported_profiles.push( profile_id );
+                localStorage.setItem( this.exported_profiles_key, 
+                    JSON.stringify( exported_profiles )
+                );
+            }
+            var rbox_urls = JSON.parse(
+                localStorage.getItem(
+                    this.exported_profiles_rbox_urls_key
+                )
+            );
+            rbox_urls[profile_id] = rbox_url;
+            localStorage.setItem( this.exported_profiles_rbox_urls_key,
+                JSON.stringify(rbox_urls)
+            );
         },
 
         extractProfile: function() {
@@ -143,14 +207,24 @@
                     }
                 }
             );
-            content.background_html = profile_html;
+            var $profile_html = $( profile_html );
+            $profile_html.find( 'a' ).contents().unwrap();
+            content.background_html = $profile_html.html();
+
+            content.profile_id = this.getProfileIdentifier();
             return content;
         },
 
-        renderSuccessfulExport: function( data ) {
+        renderSuccessfulExport: function() {
+            var rbox_urls = JSON.parse(
+                localStorage.getItem(
+                    this.exported_profiles_rbox_urls_key
+                )
+            );
+            var profile_id = this.getProfileIdentifier();
+            var rbox_url = rbox_urls[profile_id];
             var context = {
-                view_url: _RBP.RboxManager._meta['BASE_URI'] +
-                    '/app/#candidates/view:' + data.id
+                view_url: _RBP.RboxManager._meta['BASE_URI'] + rbox_url
             }
             var successful_export_html = _.templateFromId(
                 'jst-plugin-successful-export', context);
@@ -172,6 +246,7 @@
         events: function() {
             var self = this;
             $(document).ready(function() {
+                self.initLocalStorage();
                 self.injectStyling();
                 self.initScaffold();
             }).on( 'click',
@@ -188,7 +263,12 @@
                             self.renderErroneousExport();
                         }
                     } , function( data ) {
-                        self.renderSuccessfulExport( data );
+                        var rbox_url = '/app/#candidates/view:' + data.id;
+                        if( profile.profile_id ) {
+                            self.addProfileToLocalStorage(
+                                profile.profile_id, rbox_url );
+                        }
+                        self.renderSuccessfulExport();
                     });
                     e && e.preventDefault();
                 }
