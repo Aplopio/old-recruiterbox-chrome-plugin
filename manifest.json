@@ -15,7 +15,7 @@
     "css/style.css"
   ],
   "permissions": [
-    "cookies", "tabs", "<all_urls>"
+    "https://*.recruiterbox.com/", "https://*.linkedin.com/", "http://*.linkedin.com/"
   ],
   "icons": {
     "48": "images/icon_48.png",
