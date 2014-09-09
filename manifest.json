@@ -17,7 +17,7 @@
   "permissions": [
     "cookies", "tabs", "<all_urls>"
   ],
-  "browser_action": {
-    "default_icon": "images/icon.png"
+  "icons": {
+    "40": "images/icon.png"
   }
 }
