@@ -65,9 +65,14 @@
         events: function() {
             var self = this;
             $(document).on('click', '.rbox-plugin-login-btn', function(e) {
-                console.log('Login clicked');
-                window.open(self._meta.BASE_URI + '/accounts/chrome_plugin_login',
-                    'chrome_plugin_login', "width=380, height=480");
+                self.isLoggedIn( function(is_logged_in, credentials) {
+                    if( is_logged_in ) {
+                        window.location.reload(true);
+                    } else {
+                        window.open(self._meta.BASE_URI + '/accounts/chrome_plugin_login',
+                            'chrome_plugin_login', "width=380, height=480");
+                    }
+                });
                 e.preventDefault();
             });
 
