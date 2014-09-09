@@ -84,10 +84,10 @@
                 }
             }
              
-            if (window.addEventListener){
-                addEventListener("message", listener, false);
+            if( window.addEventListener ){
+                addEventListener( "message", listener, false );
             } else {
-                attachEvent("onmessage", listener);
+                attachEvent( "onmessage", listener );
             }
         }
     };
@@ -97,9 +97,9 @@
         exported_profiles_rbox_urls_key : 'rbox-exported-profiles-rbox-urls',
 
         injectStyling: function() {
-            var anchor = chrome.extension.getURL('css/style.css');
-            $('<link rel="stylesheet" type="text/css" href="' + 
-                anchor + '" >').appendTo("head");
+            var anchor = chrome.extension.getURL( 'css/style.css' );
+            $( '<link rel="stylesheet" type="text/css" href="' + 
+                anchor + '" >' ).appendTo( "head" );
         },
 
         initScaffold: function() {
