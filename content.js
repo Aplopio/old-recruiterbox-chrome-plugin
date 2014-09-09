@@ -49,12 +49,11 @@
             };
         },
 
-        exportAsCandidate: function( data, options, callback ) {
-            options = options || {};
+        exportAsCandidate: function( data, callback, errCallback ) {
             var self = this;
             self.exportAsCandidateCallback = callback;
-            if( options.errCallback ) {
-                self.exportAsCandidateErrCallback = options.errCallback;
+            if( errCallback ) {
+                self.exportAsCandidateErrCallback = errCallback;
             }
             _RBP.port.postMessage({
                 request: "rbox_export_as_candidate",
@@ -264,18 +263,19 @@
                     source_data.source = 'LinkedIn';
                     var export_data = $.extend({}, profile,
                         { source_data: source_data });
-                    _RBP.RboxManager.exportAsCandidate(export_data, {
-                        errCallback: function() {
+                    _RBP.RboxManager.exportAsCandidate(export_data, 
+                        function( data ) {
+                            var rbox_url = '/app/#candidates/view:' + data.id;
+                            if( profile.profile_id ) {
+                                self.addProfileToLocalStorage(
+                                    profile.profile_id, rbox_url );
+                            }
+                            self.renderSuccessfulExport();
+                        },
+                        function() {
                             self.renderErroneousExport();
                         }
-                    } , function( data ) {
-                        var rbox_url = '/app/#candidates/view:' + data.id;
-                        if( profile.profile_id ) {
-                            self.addProfileToLocalStorage(
-                                profile.profile_id, rbox_url );
-                        }
-                        self.renderSuccessfulExport();
-                    });
+                    );
                     e && e.preventDefault();
                 }
             );
@@ -284,7 +284,7 @@
 
     
     _RBP.router = function() {
-        var href = document.location.href
+        var href = document.location.href;
         var linkedin_url_1 = href.match(
             /^https:\/\/[a-z]*.linkedin.com\/profile\/view.*/g);
         var linkedin_url_2 = href.match(

@@ -67,7 +67,7 @@
             });
         },
 
-        createRboxDocResource: function( html, options, callback ) {
+        createRboxDocResource: function( html, options, callback, errCallback ) {
             options = options || {};
             var self = this;
             var filename = options.filename || 'profile.html';
@@ -77,20 +77,20 @@
             _RBB.utils.postJSON( url_with_credentials, {
                 filename: filename,
                 filecontent: html
-            }, callback, options.errCallback );
+            }, callback, errCallback );
         },
 
-        createRboxCandidateResource: function( data, options, callback ) {
+        createRboxCandidateResource: function( data, options, callback, errCallback ) {
             options = options || {};
             var self = this;
             var url_with_credentials = self.getURLWithCredentials(
                 self._meta.BASE_API_URI + '/candidates/', options.credentials
             );
             _RBB.utils.postJSON( url_with_credentials,
-                data, callback, options.errCallback );
+                data, callback, errCallback );
         },
 
-        exportAsCandidate: function( data, options, callback ) {
+        exportAsCandidate: function( data, options, callback, errCallback ) {
             options = options || {};
             var self = this;
             var html = data.background_html;
@@ -100,8 +100,7 @@
                     self.createRboxDocResource(
                         html, {
                             filename: _RBB.utils.slugify( profile_name ) + '.html',
-                            credentials: credentials,
-                            errCallback: options.errCallback
+                            credentials: credentials
                         },
                         function( doc ) {
                             var candidate_data = {
@@ -111,10 +110,10 @@
                                 candidate_source: data.source_data.source
                             };
                             self.createRboxCandidateResource( candidate_data, {
-                                credentials: credentials,
-                                errCallback: options.errCallback
-                            }, callback);
-                        }
+                                credentials: credentials
+                            }, callback, errCallback);
+                        },
+                        errCallback
                     );
                 });   
             }
@@ -133,15 +132,14 @@ chrome.runtime.onConnect.addListener( function( port ) {
                 });
             } else if( context.request === 'rbox_export_as_candidate' ) {
                 _RBB.RboxManager.exportAsCandidate(
-                    context.profile_to_export, {
-                        errCallback: function() {
-                            context.error = 'Something went wrong';
-                            port.postMessage( context );
-                        } 
-                    },
+                    context.profile_to_export, {},
                     function( data ){
                         context.data = data;
                         port.postMessage( context );
+                    },
+                    function() {
+                        context.error = 'Something went wrong';
+                            port.postMessage( context );
                     }
                 );
             }
