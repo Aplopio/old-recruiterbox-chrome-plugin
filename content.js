@@ -269,7 +269,7 @@
                     source_data.source = 'LinkedIn';
                     var export_data = $.extend({}, profile,
                         { source_data: source_data });
-                    _RBP.RboxManager.exportAsCandidate(export_data, 
+                    _RBP.RboxManager.exportAsCandidate(export_data,
                         function( data ) {
                             var rbox_url = '/app/#candidates/view:' + data.id;
                             if( profile.profile_id ) {
@@ -278,8 +278,13 @@
                             }
                             self.renderSuccessfulExport();
                         },
-                        function() {
-                            self.renderErroneousExport();
+                        function( err ) {
+                            if ( err.status == 401 ){
+                                self.renderLoginBlock();
+                            }
+                            else {
+                                self.renderErroneousExport();
+                            }
                         }
                     );
                     e && e.preventDefault();
@@ -328,4 +333,3 @@
 
     _RBP.main();
 })( jQuery );
-
