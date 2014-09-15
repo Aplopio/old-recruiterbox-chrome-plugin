@@ -137,9 +137,9 @@ chrome.runtime.onConnect.addListener( function( port ) {
                         context.data = data;
                         port.postMessage( context );
                     },
-                    function() {
-                        context.error = 'Something went wrong';
-                            port.postMessage( context );
+                    function( error ) {
+                        context.error = error;
+                        port.postMessage( context );
                     }
                 );
             }
