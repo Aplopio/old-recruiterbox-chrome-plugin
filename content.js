@@ -110,29 +110,28 @@
                 )
             );
             _RBP.RboxManager.isLoggedIn( function( is_logged_in, credentials ) {
-                var block_to_inject = 'jst-plugin-login-block';
                 var block_context = {};
                 if( is_logged_in ) {
-                    block_to_inject = 'jst-plugin-export-block';
                     block_context = {
                         name: credentials.name,
                         client_name: credentials.client_name,
                         company_name: credentials.company_name
                     };
-                }
-                $( '.rbox-plugin-body' ).html(
-                    _.templateFromId(
-                        block_to_inject, block_context
-                    )
-                );
-                if( is_logged_in ) {
+                    $( '.rbox-plugin-body' ).html(
+                        _.templateFromId(
+                            'jst-plugin-export-block', block_context
+                        )
+                    );
                     var profile_id = self.getProfileIdentifier();
                     if( self.isProfileAlreadyExported( profile_id ) ) {
                         self.renderSuccessfulExport();
                     }
                 }
+                else {
+                    self.renderLoginBlock();
+                }
             });
-            
+
         },
 
         initLocalStorage: function () {
@@ -230,10 +229,17 @@
             var rbox_url = rbox_urls[profile_id];
             var context = {
                 view_url: _RBP.RboxManager._meta['BASE_URI'] + rbox_url
-            }
+            };
             var successful_export_html = _.templateFromId(
                 'jst-plugin-successful-export', context);
             $('.rbox-plugin-export-span').html( successful_export_html );
+        },
+
+        renderLoginBlock: function () {
+            var login_block_html = _.templateFromId(
+                'jst-plugin-login-block', {}
+            );
+            $( '.rbox-plugin-body' ).html( login_block_html );
         },
 
         renderWaitingExport: function() {
