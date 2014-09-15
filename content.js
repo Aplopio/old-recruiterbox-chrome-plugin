@@ -83,7 +83,7 @@
                     window.location.reload(true);
                 }
             }
-             
+
             if( window.addEventListener ){
                 addEventListener( "message", listener, false );
             } else {
@@ -98,7 +98,7 @@
 
         injectStyling: function() {
             var anchor = chrome.extension.getURL( 'css/style.css' );
-            $( '<link rel="stylesheet" type="text/css" href="' + 
+            $( '<link rel="stylesheet" type="text/css" href="' +
                 anchor + '" >' ).appendTo( "head" );
         },
 
@@ -173,7 +173,7 @@
             );
             if( exported_profiles.indexOf( profile_id ) === -1 ) {
                 exported_profiles.push( profile_id );
-                localStorage.setItem( this.exported_profiles_key, 
+                localStorage.setItem( this.exported_profiles_key,
                     JSON.stringify( exported_profiles )
                 );
             }
@@ -282,7 +282,7 @@
         }
     };
 
-    
+
     _RBP.router = function() {
         var href = document.location.href;
         var linkedin_url_1 = href.match(
@@ -313,7 +313,7 @@
         $(document).ready(function() {
             _RBP.router();
             _RBP.RboxManager.events();
-        }); 
+        });
     };
 
     _RBP.main = function() {

@@ -115,11 +115,11 @@
                         },
                         errCallback
                     );
-                });   
+                });
             }
-        }       
+        }
     };
-    
+
 })( jQuery );
 
 chrome.runtime.onConnect.addListener( function( port ) {
