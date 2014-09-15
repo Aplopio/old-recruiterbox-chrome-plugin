@@ -21,7 +21,7 @@
                 dataType: 'json',
                 success: callback,
                 error: function(XMLHttpRequest, textStatus, errorThrow) {
-                    errCallback();
+                    errCallback( XMLHttpRequest );
                 }
             });
         },
