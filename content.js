@@ -16,22 +16,25 @@
             // BASE_API_URI: 'http://demoaccount.rbox.com:8000/api/v1'
         },
 
-        getCredentialsCallback: function() {
+        isLoggedInCallback: function() {
             /* You need to assign callback to this field */
         },
 
-        getCredentials: function( callback ) {
-            var self = this;
-            self.getCredentialsCallback = callback;
+        isLoggedIn: function( callback ) {
+            this.isLoggedInCallback = callback;
             _RBP.port.postMessage({
-                request: "rbox_get_credentials"
+                request: "rbox_is_logged_in"
             });
         },
 
-        isLoggedIn: function( callback ) {
-            var self = this;
-            self.getCredentials( function( data ) {
-                callback( Boolean( data && data.api_key ), data );
+        getUserInfoCallback: function( callback ) {
+            /* You need to assign callback to this field */
+        },
+
+        getUserInfo: function( callback ) {
+            this.getUserInfoCallback = callback;
+            _RBP.port.postMessage({
+                request: "rbox_get_user_info"
             });
         },
 
@@ -64,8 +67,8 @@
         events: function() {
             var self = this;
             $(document).on('click', '.rbox-plugin-login-btn', function(e) {
-                self.isLoggedIn( function(is_logged_in, credentials) {
-                    if( is_logged_in ) {
+                self.isLoggedIn( function( data ) {
+                    if( data.is_logged_in ) {
                         window.location.reload(true);
                     } else {
                         window.open(self._meta.BASE_URI + '/accounts/chrome_plugin_login',
@@ -109,23 +112,10 @@
                     'jst-plugin-body', {}
                 )
             );
-            _RBP.RboxManager.isLoggedIn( function( is_logged_in, credentials ) {
+            _RBP.RboxManager.isLoggedIn( function( data ) {
                 var block_context = {};
-                if( is_logged_in ) {
-                    block_context = {
-                        name: credentials.name,
-                        client_name: credentials.client_name,
-                        company_name: credentials.company_name
-                    };
-                    $( '.rbox-plugin-body' ).html(
-                        _.templateFromId(
-                            'jst-plugin-export-block', block_context
-                        )
-                    );
-                    var profile_id = self.getProfileIdentifier();
-                    if( self.isProfileAlreadyExported( profile_id ) ) {
-                        self.renderSuccessfulExport();
-                    }
+                if( data.is_logged_in ) {
+                    self.renderPostLoginBlock();
                 }
                 else {
                     self.renderLoginBlock();
@@ -219,6 +209,32 @@
             return content;
         },
 
+        renderLoginBlock: function() {
+            var login_block_html = _.templateFromId(
+                'jst-plugin-login-block', {}
+            );
+            $( '.rbox-plugin-body' ).html( login_block_html );
+        },
+
+        renderPostLoginBlock: function() {
+            var self = this;
+            _RBP.RboxManager.getUserInfo( function( user_info ) {
+                block_context = {
+                    name: user_info.user_name,
+                    company_name: user_info.company_name
+                };
+                $( '.rbox-plugin-body' ).html(
+                    _.templateFromId(
+                        'jst-plugin-export-block', block_context
+                    )
+                );
+                var profile_id = self.getProfileIdentifier();
+                if( self.isProfileAlreadyExported( profile_id ) ) {
+                    self.renderSuccessfulExport();
+                }
+            });
+        },
+
         renderSuccessfulExport: function() {
             var rbox_urls = JSON.parse(
                 localStorage.getItem(
@@ -233,13 +249,6 @@
             var successful_export_html = _.templateFromId(
                 'jst-plugin-successful-export', context);
             $('.rbox-plugin-export-span').html( successful_export_html );
-        },
-
-        renderLoginBlock: function () {
-            var login_block_html = _.templateFromId(
-                'jst-plugin-login-block', {}
-            );
-            $( '.rbox-plugin-body' ).html( login_block_html );
         },
 
         renderWaitingExport: function() {
@@ -308,8 +317,10 @@
     _RBP.events = function() {
         var self = this;
         self.port.onMessage.addListener( function( context ) {
-            if( context.request === 'rbox_get_credentials' ) {
-                _RBP.RboxManager.getCredentialsCallback( context.data );
+            if( context.request === 'rbox_is_logged_in' ) {
+                _RBP.RboxManager.isLoggedInCallback( context.data );
+            } else if( context.request === 'rbox_get_user_info' ) {
+                _RBP.RboxManager.getUserInfoCallback( context.data );
             } else if( context.request === 'rbox_export_as_candidate' ) {
                 if( context.error ) {
                     _RBP.RboxManager.exportAsCandidateErrCallback(

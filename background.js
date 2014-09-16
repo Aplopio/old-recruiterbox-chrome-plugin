@@ -6,7 +6,12 @@
             return base_url + '?' + $.param(params);
         },
 
-        postJSON: function( url, data, callback, errCallback ) {
+        getAuthorizationHeaders: function( access_token ) {
+            return { 'Authorization': 'token ' + access_token };
+        },
+
+        postJSON: function( url, data, options, callback, errCallback ) {
+            options = options || {};
             if( errCallback === undefined ) {
                 errCallback = function() {
                     console.error('Something broke');
@@ -15,6 +20,7 @@
             }
             return $.ajax({
                 url: url,
+                headers: this.getAuthorizationHeaders( options.access_token ),
                 data:JSON.stringify(data),
                 type:'POST',
                 contentType:'application/json',
@@ -23,6 +29,18 @@
                 error: function(XMLHttpRequest, textStatus, errorThrow) {
                     errCallback( XMLHttpRequest );
                 }
+            });
+        },
+
+        getRequest: function( url, options, callback, errCallback ) {
+            options = options || {};
+            return $.ajax({
+                url: url,
+                type: "GET",
+                headers: this.getAuthorizationHeaders( 
+                    options.access_token ),
+                success: callback,
+                error: errCallback
             });
         },
 
@@ -44,6 +62,8 @@
             // BASE_API_URI: 'http://demoaccount.rbox.com:8000/api/v1'
         },
 
+        _cache: {},
+
         getURLWithCredentials: function( url, credentials ) {
             var params = $.extend(
                 {}, {
@@ -58,8 +78,11 @@
 
         getCredentials: function( callback ) {
             var self = this;
-            $.get(self._meta.BASE_URI + '/accounts/get_credentials_for_plugin_user',
+            $.get(self._meta.BASE_URI + '/public_api/v1/get_access_token',
                 function( data ) {
+                    self._cache.current_user_id = data.user_id;
+                    self._cache.current_client_id = data.client_id;
+                    self._cache.access_token = data.token;
                     callback( data );
                 }
             ).error( function( data ) {
@@ -67,27 +90,61 @@
             });
         },
 
+        getUserInfo: function( callback ) {
+            var self = this;
+            var client_url = this._meta.BASE_API_URI + '/clients/' +
+                this._cache.current_client_id + '/';
+            var user_url = this._meta.BASE_API_URI + '/users/' +
+                this._cache.current_user_id + '/';
+            _RBB.utils.getRequest(client_url,
+                { access_token: self._cache.access_token },
+                function( client_data ) {
+                    _RBB.utils.getRequest(user_url,
+                        { access_token: self._cache.access_token },
+                        function( user_data ) {
+                            callback({
+                                company_name: client_data.company_name,
+                                user_name: user_data.name
+                            });
+                        }, function() {
+                            /* Error handling for failed user fetch */
+                        }
+                    );
+                }, function() {
+                    /* Error handling for failed client fetch */
+                }
+            );
+        },
+
+        isLoggedIn: function( callback ) {
+            this.getCredentials( function( data ) {
+                callback({
+                    is_logged_in: Boolean( data && data.token )
+                });
+            });
+        },
+
         createRboxDocResource: function( html, options, callback, errCallback ) {
             options = options || {};
             var self = this;
             var filename = options.filename || 'profile.html';
-            var url_with_credentials = self.getURLWithCredentials(
-                self._meta.BASE_API_URI + '/docs/', options.credentials
+            _RBB.utils.postJSON(
+                self._meta.BASE_API_URI + '/docs/', {
+                    filename: filename,
+                    filecontent: html
+                }, { access_token: this._cache.access_token },
+                callback, errCallback
             );
-            _RBB.utils.postJSON( url_with_credentials, {
-                filename: filename,
-                filecontent: html
-            }, callback, errCallback );
         },
 
         createRboxCandidateResource: function( data, options, callback, errCallback ) {
             options = options || {};
             var self = this;
-            var url_with_credentials = self.getURLWithCredentials(
-                self._meta.BASE_API_URI + '/candidates/', options.credentials
+            _RBB.utils.postJSON(
+                self._meta.BASE_API_URI + '/candidates/', data, {
+                    access_token: this._cache.access_token
+                }, callback, errCallback
             );
-            _RBB.utils.postJSON( url_with_credentials,
-                data, callback, errCallback );
         },
 
         exportAsCandidate: function( data, options, callback, errCallback ) {
@@ -96,26 +153,22 @@
             var html = data.background_html;
             var profile_name = data.profile_name || 'no name';
             if( html ) {
-                self.getCredentials( function( credentials ) {
-                    self.createRboxDocResource(
-                        html, {
-                            filename: _RBB.utils.slugify( profile_name ) + '.html',
-                            credentials: credentials
-                        },
-                        function( doc ) {
-                            var candidate_data = {
-                                first_name: profile_name,
-                                last_name: '',
-                                resume: doc.resource_uri,
-                                candidate_source: data.source_data.source
-                            };
-                            self.createRboxCandidateResource( candidate_data, {
-                                credentials: credentials
-                            }, callback, errCallback);
-                        },
-                        errCallback
-                    );
-                });
+                self.createRboxDocResource(
+                    html, {
+                        filename: _RBB.utils.slugify( profile_name ) + '.html'
+                    },
+                    function( doc ) {
+                        var candidate_data = {
+                            first_name: profile_name,
+                            last_name: '',
+                            resume: doc.resource_uri,
+                            candidate_source: data.source_data.source
+                        };
+                        self.createRboxCandidateResource( candidate_data, {
+                        }, callback, errCallback);
+                    },
+                    errCallback
+                );
             }
         }
     };
@@ -125,8 +178,13 @@
 chrome.runtime.onConnect.addListener( function( port ) {
     if( port.name == "RB_PORT" ) {
         port.onMessage.addListener( function( context ) {
-            if( context.request === 'rbox_get_credentials' ) {
-                _RBB.RboxManager.getCredentials( function( data ) {
+            if( context.request === 'rbox_is_logged_in' ) {
+                _RBB.RboxManager.isLoggedIn( function( data ) {
+                    context.data = data;
+                    port.postMessage( context );
+                });
+            } else if( context.request === 'rbox_get_user_info' ) {
+                _RBB.RboxManager.getUserInfo( function( data ) {
                     context.data = data;
                     port.postMessage( context );
                 });
