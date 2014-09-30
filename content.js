@@ -11,9 +11,11 @@
     _RBP.RboxManager = {
         _meta: {
             BASE_URI: 'https://app.recruiterbox.com',
-            BASE_API_URI: 'https://app.recruiterbox.com/api/v1'
-            // BASE_URI: 'http://demoaccount.rbox.com:8000',
-            // BASE_API_URI: 'http://demoaccount.rbox.com:8000/api/v1'
+            BASE_API_URI: 'https://app.recruiterbox.com/api/v1',
+            BASE_PUBLIC_API_URI: 'https://app.recruiterbox.com/public_api/v1'
+            // BASE_URI: 'http://app.rbox.com:8000',
+            // BASE_API_URI: 'http://app.rbox.com:8000/api/v1'
+            // BASE_PUBLIC_API_URI: 'http://app.rbox.com:8000/public_api/v1'
         },
 
         isLoggedInCallback: function() {

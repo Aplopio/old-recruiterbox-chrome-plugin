@@ -37,7 +37,7 @@
             return $.ajax({
                 url: url,
                 type: "GET",
-                headers: this.getAuthorizationHeaders( 
+                headers: this.getAuthorizationHeaders(
                     options.access_token ),
                 success: callback,
                 error: errCallback
@@ -57,9 +57,11 @@
     _RBB.RboxManager = {
         _meta: {
             BASE_URI: 'https://app.recruiterbox.com',
-            BASE_API_URI: 'https://app.recruiterbox.com/api/v1'
-            // BASE_URI: 'http://demoaccount.rbox.com:8000',
-            // BASE_API_URI: 'http://demoaccount.rbox.com:8000/api/v1'
+            BASE_API_URI: 'https://app.recruiterbox.com/api/v1',
+            BASE_PUBLIC_API_URI: 'https://app.recruiterbox.com/public_api/v1'
+            // BASE_URI: 'http://app.rbox.com:8000',
+            // BASE_API_URI: 'http://app.rbox.com:8000/api/v1'
+            // BASE_PUBLIC_API_URI: 'http://app.rbox.com:8000/public_api/v1'
         },
 
         _cache: {},
@@ -141,7 +143,7 @@
             options = options || {};
             var self = this;
             _RBB.utils.postJSON(
-                self._meta.BASE_API_URI + '/candidates/', data, {
+                self._meta.BASE_PUBLIC_API_URI + '/candidates/', data, {
                     access_token: this._cache.access_token
                 }, callback, errCallback
             );
