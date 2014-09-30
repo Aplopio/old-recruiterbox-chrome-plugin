@@ -244,7 +244,7 @@
                 )
             );
             var profile_id = this.getProfileIdentifier();
-            var rbox_url = rbox_urls[profile_id];
+            var rbox_url = rbox_urls[profile_id] || '/app/#candidates/list/all/';
             var context = {
                 view_url: _RBP.RboxManager._meta['BASE_URI'] + rbox_url
             };
